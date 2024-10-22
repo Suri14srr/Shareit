@@ -7,4 +7,6 @@ An application that enables seamless file sharing without barriers.
 
 git clone https://github.com/krishna-kumark/shareit.git \
 cd shareit \
+python manage.py makemigrations \
+python manage.py migrate \
 python manage.py runserver
