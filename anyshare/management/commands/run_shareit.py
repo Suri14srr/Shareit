@@ -13,22 +13,16 @@ class Command(BaseCommand):
             help='Port number to run the server on (default: 8000)',
         )
         parser.add_argument(
-            '--local',
+            '--deploy',
             type=str,
             nargs='?',
             default="",
             help='to get the deployment type',
-        )        
-        parser.add_argument(
-            '--server',
-            type=str,
-            nargs='?',
-            default="",
-            help='to get the deployment type',
-        )        
+        )
     def handle(self, *args, **kwargs):
         port = kwargs['port']
-        if kwargs.get('local') is None:  
+        deployment_type = kwargs['deploy']
+        if deployment_type == 'local':
             self.stdout.write(self.style.SUCCESS(f'Starting server on port {port}...'))
             call_command('runserver', f'{port}')
         else:
