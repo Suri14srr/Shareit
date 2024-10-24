@@ -25,5 +25,5 @@ class Command(BaseCommand):
         if deployment_type == 'local':
             self.stdout.write(self.style.SUCCESS(f'Starting server on port {port}...'))
             call_command('runserver', f'{port}')
-        else:
+        elif deployment_type == 'server':
             print("Server implementation yet to define")
