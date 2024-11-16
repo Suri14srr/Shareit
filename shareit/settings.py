@@ -20,12 +20,48 @@ import os
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Static files (CSS, JavaScript, images)
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 SECRET_KEY = 'django-insecure-(boltobq%0k3=t%*vx#s+!@794d=h6mu@3+alj=&#p-r%^68p6'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = []
+STATIC_URL = '/static/'
+
+# settings.py
+EMAIL_PORT = 587  # or 465 if using SSL
+EMAIL_USE_TLS = True  # for STARTTLS
+EMAIL_USE_SSL = False  # True if using port 465
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # or the SMTP host of your email provider
+EMAIL_PORT = 587  # or 465 for SSL
+EMAIL_USE_TLS = True  # or False if using SSL
+EMAIL_HOST_USER = 'trendout.in@gmail.com'
+EMAIL_HOST_PASSWORD = 'Suri@123'  # Use an app-specific password or a secure token
+DEFAULT_FROM_EMAIL = 'trendout.in@gmail.com'
+
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000']
+
+
+# Celery Settings
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
 
 
 # Application definition
@@ -37,8 +73,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_celery_beat',
     'anyshare',
     'channels',
+    'rest_framework',
 ]
 
 ASGI_APPLICATION = 'shareit.asgi.application'

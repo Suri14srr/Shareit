@@ -3,24 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Area with Dropdown</title>
+    <title>ShareIt</title>
+
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
+            background-color: #f4f4f9;
         }
         .container {
             max-width: 600px;
             margin: auto;
-        }
-        .dropdown {
-            margin-bottom: 10px;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         #timer {
             color: red;
             font-weight: bold;
             text-align: center;
             margin-bottom: 10px;
+            font-size: 20px;
         }
         textarea {
             width: 100%;
@@ -30,46 +34,121 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             resize: none;
+            margin-bottom: 10px;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+        }
+        .button.red {
+            background-color: #dc3545;
+        }
+        .button:disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+        input[type="email"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div id="timer">1:00</div> <!-- Countdown timer display -->
-    <div class="dropdown">
-        <label for="format">Choose a format:</label>
-        <select id="format" name="format">
-            <option value="json">JSON</option>
-            <option value="xml">XML</option>
-            <option value="text">Text</option>
-        </select>
-    </div>
+    <div id="timer">3:00</div> <!-- Countdown timer display -->
     <textarea id="content" placeholder="Enter your content here..."></textarea>
+    <button class="button red" id="clear-btn">Clear</button>
+    
+    <h3>Send an Invitation</h3>
+    <form id="email-form">
+        <input type="email" id="email" placeholder="Enter recipient's email" required>
+        <button class="button" type="submit">Send Invite</button>
+    </form>
 </div>
 
 <script>
-    // Timer setup
-    let timeLeft = 60; // 60 seconds (1 minute)
-    const timerElement = document.getElementById("timer");
-
-    // Update the countdown every second
-    const timerInterval = setInterval(function() {
-        let minutes = Math.floor(timeLeft / 60);
-        let seconds = timeLeft % 60;
-        seconds = seconds < 10 ? '0' + seconds : seconds;
-
-        timerElement.innerText = `${minutes}:${seconds}`;
-        timeLeft -= 1;
-
-        if (timeLeft < 0) {
-            clearInterval(timerInterval);
-            window.location.href = "/expired"; // Redirect to expired page
+    // Email invite functionality
+    document.getElementById('email-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const email = document.getElementById("email").value;
+        const content = document.getElementById("content").value; // Get content from textarea
+        
+        if (!email) {
+            alert("Email is required");
+            return;
         }
-    }, 1000);
 
-    // WebSocket setup
+        // Send the email and content data to the backend
+        fetch('/invite/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: JSON.stringify({ email: email, content: content }), // Include content in request body
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message || 'Invitation sent successfully!');
+        })
+        .catch(error => {
+            alert('Error sending email. Please try again.');
+            console.error('Error:', error);
+        });
+    });
+
+
+
+    // Timer setup for 3 minutes
+    const timerElement = document.getElementById("timer");
+    const countdownDuration = 180; // 3 minutes in seconds
     const contentArea = document.getElementById('content');
+
+    // Check if end time is saved in localStorage
+    let endTime = localStorage.getItem("endTime");
+
+    // Set the end time if not set, or if the previous end time has passed
+    if (!endTime || new Date().getTime() > parseInt(endTime)) {
+        endTime = new Date().getTime() + countdownDuration * 1000; // 3 minutes from now
+        localStorage.setItem("endTime", endTime);
+    }
+
+    // Function to update the timer
+    function updateTimer() {
+        const currentTime = new Date().getTime();
+        const timeLeft = parseInt(endTime) - currentTime;
+
+        if (timeLeft <= 0) {
+            timerElement.innerText = "0:00";
+            clearInterval(timerInterval);
+            alert("Time's up! Redirecting...");
+            window.location.href = "/expired"; // Redirect to expired page
+        } else {
+            let minutes = Math.floor(timeLeft / 1000 / 60);
+            let seconds = Math.floor((timeLeft / 1000) % 60);
+            seconds = seconds < 10 ? '0' + seconds : seconds;
+            timerElement.innerText = `${minutes}:${seconds}`;
+        }
+    }
+
+    // Update timer every second
+    const timerInterval = setInterval(updateTimer, 1000);
+
+    // WebSocket setup (if required for real-time syncing)
     const socket = new WebSocket('ws://' + window.location.host + '/ws/sync/');
 
     socket.onopen = function(event) {
@@ -79,6 +158,7 @@
     socket.onmessage = function(event) {
         const data = JSON.parse(event.data);
         contentArea.value = data.message;
+        saveContentToLocal();
     };
 
     socket.onerror = function(error) {
@@ -89,9 +169,54 @@
         console.log("WebSocket is closed now.");
     };
 
+    // Save data to local storage
+    function saveContentToLocal() {
+        localStorage.setItem('content', contentArea.value);
+    }
+
+    // Retrieve content from local storage on page load
+    window.onload = function() {
+        if (localStorage.getItem('content')) {
+            contentArea.value = localStorage.getItem('content');
+        }
+    }
+
+    // Clear button functionality
+    document.getElementById('clear-btn').addEventListener('click', function() {
+        contentArea.value = '';
+        saveContentToLocal();
+    });
+
+    // Undo/Redo functionality with keyboard shortcuts
+    let undoStack = [];
+    let redoStack = [];
+
     contentArea.addEventListener('input', function() {
+        undoStack.push(contentArea.value);
+        redoStack = []; // Clear redo stack on new input
+        saveContentToLocal();
         if (socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ 'message': contentArea.value }));
+        }
+    });
+
+    contentArea.addEventListener('keydown', function(event) {
+        if (event.ctrlKey && event.key === 'z') {
+            // Ctrl+Z for Undo
+            event.preventDefault();
+            if (undoStack.length > 1) {
+                redoStack.push(undoStack.pop());
+                contentArea.value = undoStack[undoStack.length - 1];
+                saveContentToLocal();
+            }
+        } else if (event.ctrlKey && event.key === 'y') {
+            // Ctrl+Y for Redo
+            event.preventDefault();
+            if (redoStack.length > 0) {
+                undoStack.push(redoStack.pop());
+                contentArea.value = undoStack[undoStack.length - 1];
+                saveContentToLocal();
+            }
         }
     });
 </script>
